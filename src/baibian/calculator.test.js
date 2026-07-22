@@ -62,7 +62,7 @@ const EXPECTED_EXCLUSIONS = {
   long_yu_si_fang_hua: ['hua_long'],
   long_yu_si_fang_qing: ['qing_long'],
   long_yu_si_fang_zuhe: ['zu_he_long'],
-  hong_kong_que: ['hun_yi_se'],
+  hong_kong_que: ['hun_yi_se', 'dan_qing_liu_cai'],
   lv_yi_se: ['duan_hong', 'qing_duan_hong', 'hun_yi_se'],
   bai_wan_shi: ['qing_yi_se'],
   hei_yi_se: ['hun_yi_se', 'duan_hong', 'qing_duan_hong'],
@@ -605,6 +605,63 @@ describe('胡癞子的硬胡资格', () => {
     expect(wait).toBeTruthy()
     expect(wait.solution.assignments).toContainEqual({laizi:'lz',as:31})
     expect(wait.score.multipliers.map(rule=>rule.id)).not.toContain('ying_hu')
+  })
+})
+
+describe('中原一点红与红孔雀的允许牌集合', () => {
+  it('中原一点红不强制出现红中，并按规则不计丹青流彩', () => {
+    const score=scoreGroups([pung(9),pung(11),pung(13),pung(15),pair(17)],{activeWildCount:1})
+    expect(score.additive.map(rule=>rule.id)).toContain('zhong_yuan_yi_dian_hong')
+    expect(score.additive.map(rule=>rule.id)).not.toContain('dan_qing_liu_cai')
+    expect(score.suppressed.find(rule=>rule.id==='dan_qing_liu_cai')?.suppressedBy.map(rule=>rule.id)).toContain('zhong_yuan_yi_dian_hong')
+    expect(score.categoryName).toBe('顶胡')
+  })
+
+  it('中原一点红仍允许红中，但不能混入集合外的筒牌', () => {
+    const withRedDragon=scoreGroups([pung(9),pung(11),pung(13),pung(31),pair(15)],{activeWildCount:1})
+    const withTwoDots=scoreGroups([pung(9),pung(10),pung(13),pung(15),pair(17)],{activeWildCount:1})
+    expect(detectedIds(withRedDragon).has('zhong_yuan_yi_dian_hong')).toBe(true)
+    expect(detectedIds(withTwoDots).has('zhong_yuan_yi_dian_hong')).toBe(false)
+  })
+
+  it('截图牌例111333555777p加万能赖听3筒按中原一点红计算', () => {
+    const result=calculateWaits({hand:parseTileCode('111333555777p la'),kongs:[],laiziKongs:[],flags})
+    const wait=result.waits.find(item=>item.id===11)
+    expect(wait).toBeTruthy()
+    expect(wait.score.additive.map(rule=>rule.id)).toContain('zhong_yuan_yi_dian_hong')
+    expect(wait.score.additive.map(rule=>rule.id)).not.toContain('dan_qing_liu_cai')
+    expect(wait.score.suppressed.map(rule=>rule.id)).toContain('dan_qing_liu_cai')
+    expect(wait.score.categoryName).toBe('顶胡')
+  })
+
+  it('红孔雀不强制出现红中，但不能混入集合外的条牌', () => {
+    const withoutRedDragon=scoreGroups([pung(18),pung(22),pung(24),pung(26),pair(18)],{activeWildCount:1})
+    const withRedDragon=scoreGroups([pung(18),pung(22),pung(24),pung(31),pair(26)],{activeWildCount:1})
+    const withThreeBamboo=scoreGroups([pung(18),pung(20),pung(24),pung(26),pair(18)],{activeWildCount:1})
+    expect(detectedIds(withoutRedDragon).has('hong_kong_que')).toBe(true)
+    expect(withoutRedDragon.additive.map(rule=>rule.id)).not.toContain('dan_qing_liu_cai')
+    expect(withoutRedDragon.suppressed.find(rule=>rule.id==='dan_qing_liu_cai')?.suppressedBy.map(rule=>rule.id)).toContain('hong_kong_que')
+    expect(detectedIds(withRedDragon).has('hong_kong_que')).toBe(true)
+    expect(detectedIds(withThreeBamboo).has('hong_kong_que')).toBe(false)
+  })
+})
+
+describe('推不倒允许牌集合', () => {
+  it('仅允许1至5、8、9筒，2、4、5、6、8、9条及白板', () => {
+    const valid=scoreGroups([pung(9),pung(16),pung(19),pung(26),pair(33)],{activeWildCount:1})
+    const withThreeBamboo=scoreGroups([pung(9),pung(16),pung(20),pung(26),pair(33)],{activeWildCount:1})
+    const withSevenBamboo=scoreGroups([pung(9),pung(16),pung(24),pung(26),pair(33)],{activeWildCount:1})
+    expect(detectedIds(valid).has('tui_bu_dao')).toBe(true)
+    expect(detectedIds(withThreeBamboo).has('tui_bu_dao')).toBe(false)
+    expect(detectedIds(withSevenBamboo).has('tui_bu_dao')).toBe(false)
+  })
+
+  it('牌例222333444s555p加万能赖听4条不计推不倒', () => {
+    const result=calculateWaits({hand:parseTileCode('222333444s555p la'),kongs:[],laiziKongs:[],flags})
+    const wait=result.waits.find(item=>item.id===21)
+    expect(wait).toBeTruthy()
+    expect(wait.score.additive.map(rule=>rule.id)).not.toContain('tui_bu_dao')
+    expect(wait.score.suppressed.map(rule=>rule.id)).not.toContain('tui_bu_dao')
   })
 })
 
