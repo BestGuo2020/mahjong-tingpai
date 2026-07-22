@@ -8,4 +8,5 @@
 .image-face{background:url('/ivory-tile-texture.png') center/cover;padding:6px 5px}.image-face img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;filter:saturate(1.06) contrast(1.05)}
 .tile>b{z-index:10;box-shadow:0 2px 5px #54201855;border:2px solid #fffdf8}
 @media(max-width:720px){.image-face{padding:4px 3px}}
+.laizi-image-lp img{transform:scaleX(1.09)}.laizi-image-ls img{transform:scaleX(1.14)}
 .page-nav{display:flex;align-items:center;gap:6px}.page-nav a{padding:8px 12px;border-radius:999px;color:#65746f;text-decoration:none;font-size:12px;font-weight:700}.page-nav a.router-link-active{background:#174b42;color:#fff}

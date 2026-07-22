@@ -171,7 +171,11 @@ export const RULE_CATALOG = [
   additive('da_si_xi','大四喜',900,'big',f => [27,28,29,30].every(f.hasPung),{ superWhen: f => f.ids.every(id => id >= 27) || isMixedTerminals(f) || isBrokenRed(f), superCap: 12000 }),
   additive('da_san_yuan','大三元',800,'big',f => [31,32,33].every(f.hasPung)),
   additive('quan_bu_kao','全不靠',800,'big',(f,ctx) => ctx.solution.kind === 'allUnrelated'),
-  additive('si_tong_shun','四同顺',600,'big',f => f.sequenceStarts.some(start => f.countSequences(start) >= 4),{ superWhen: f => f.usedSuits.length === 1 && !f.honors.length, superCap: 10000 }),
+  additive('si_tong_shun','四同顺',600,'big',f => f.sequenceStarts.some(start => f.countSequences(start) >= 4),{
+    categoryWith:{ qing_yi_se:'top' },
+    superWhen: f => f.usedSuits.length === 1 && !f.honors.length,
+    superCap: 10000
+  }),
   additive('xi_nan_cui_zhu_hai','西南翠竹海',500,'big',f => f.hasPung(28) && f.hasPung(29) && [19,20,21,23,25].some(f.hasPung),{ promoteWith: 'duan_hong' }),
   additive('xi_bei_wan_chong_shan','西北万重山',500,'big',f => hasAllPungs(f,[29,30,8]),{ promoteWith: 'hun_yao_jiu' }),
   additive('cai_yuan_gun_gun','财源滚滚',500,'big',f => hasAllPungs(f,[32,9,17]),{ promoteWith: 'hun_yao_jiu' }),

@@ -625,6 +625,44 @@ describe('连六对封顶等级', () => {
   })
 })
 
+describe('四同顺复合封顶等级', () => {
+  const fourIdenticalSequences=[sequence(6),sequence(6),sequence(6),sequence(6)]
+
+  it('基础四同顺为大胡', () => {
+    const score=scoreGroups([...fourIdenticalSequences,pair(27)],{activeWildCount:1})
+    expect(score.additive.map(rule=>rule.id)).toContain('si_tong_shun')
+    expect(score.additive.map(rule=>rule.id)).not.toContain('qing_yi_se')
+    expect(score.category).toBe('big')
+    expect(score.cap).toBe(4000)
+  })
+
+  it('四同顺与清一色复合时提升为顶胡', () => {
+    const score=scoreGroups([...fourIdenticalSequences,pair(0)],{activeWildCount:1})
+    expect(score.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['si_tong_shun','qing_yi_se']))
+    expect(score.category).toBe('top')
+    expect(score.categoryName).toBe('顶胡')
+    expect(score.cap).toBe(6000)
+  })
+
+  it('无癞子的清四同顺进阶超级硬胡', () => {
+    const score=scoreGroups([...fourIdenticalSequences,pair(0)])
+    expect(score.category).toBe('super')
+    expect(score.categoryName).toBe('超级硬胡')
+    expect(score.cap).toBe(10000)
+  })
+
+  it('牌例777788889999mla听1万按顶胡计算并保留详情方案', () => {
+    const result=calculateWaits({hand:parseTileCode('777788889999mla'),kongs:[],laiziKongs:[],flags})
+    const wait=result.waits.find(item=>item.id===0)
+    expect(wait).toBeTruthy()
+    expect(wait.score.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['si_tong_shun','qing_yi_se']))
+    expect(wait.score.categoryName).toBe('顶胡')
+    expect(wait.score.actual).toBe(6000)
+    expect(wait.solution.groups.filter(group=>group.type==='sequence')).toHaveLength(4)
+    expect(wait.solution.assignments).toContainEqual({laizi:'la',as:0})
+  })
+})
+
 describe('十八罗汉复合封顶等级', () => {
   const fourKongs = groups => ({
     groups,

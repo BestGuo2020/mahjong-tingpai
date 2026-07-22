@@ -119,7 +119,7 @@ const statusText = computed(() => {
 <template>
   <BaibianPage v-if="route.name === 'baibian'" />
   <main v-else>
-    <header class="topbar"><RouterLink class="brand" to="/"><span class="brand-mark">聴</span><span>听见<small>麻将听牌计算器</small></span></RouterLink><nav class="page-nav"><RouterLink to="/">标准听牌</RouterLink><RouterLink to="/baibian">百变斗牌</RouterLink></nav><span class="rule">标准国标牌型 · 含七对 / 十三幺 / 全不靠</span></header>
+    <header class="topbar"><RouterLink class="brand" to="/"><span class="brand-mark">聴</span><span>听见<small>麻将听牌计算器</small></span></RouterLink><nav class="page-nav"><RouterLink to="/">标准听牌</RouterLink><RouterLink to="/baibian/">百变斗牌</RouterLink></nav><span class="rule">标准国标牌型 · 含七对 / 十三幺 / 全不靠</span></header>
     <section class="hero">
       <div><span class="eyebrow">MAHJONG READY HAND</span><h1>下一张，<em>听什么？</em></h1><p>输入你的手牌，即刻算出全部听牌。简单、准确，不错过每一次和牌。</p></div>
       <div class="hero-tile" aria-hidden="true">🀄</div>
