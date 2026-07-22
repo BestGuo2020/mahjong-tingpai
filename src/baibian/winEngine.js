@@ -46,7 +46,7 @@ function enumerateStandard(counts, wild, fixedKongs, targetOverride = null, pref
     if (solutions.length >= MAX_SOLUTIONS) return
     if (!left) {
       if (c.every(n => n === 0) && w.every(n => n === 0)) {
-        const allGroups = [...fixedKongs.map(k => ({ type: 'kong', tiles: [k.tile, k.tile, k.tile, k.tile], fixed: true })), ...prefixGroups, ...groups]
+        const allGroups = [...fixedKongs.map(k => ({ type: 'kong', tiles: Array(k.size ?? 4).fill(k.tile), fixed: true })), ...prefixGroups, ...groups]
         solutions.push({ kind, groups: allGroups, assignments: [...prefixAssignments, ...assignments] })
       }
       return

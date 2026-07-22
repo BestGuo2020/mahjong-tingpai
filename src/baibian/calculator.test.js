@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calculateWaits, knownPhysicalCounts, validateState } from './calculator.js'
+import { availableKongOptions, calculateWaits, completedPhysicalCounts, knownPhysicalCounts, validateState } from './calculator.js'
 import {
   EXCLUSION_RELATIONS,
   REFERENCE_ONLY_RULE_IDS,
@@ -31,6 +31,7 @@ function scoreGroups(groups, options={}) {
     solution:{kind:options.kind || 'standard',groups,assignments:options.assignments || []},
     finalCounts,
     physicalCounts:options.physicalCounts || finalCounts,
+    physicalTileTotal:options.physicalTileTotal,
     kongs:options.kongs || [],
     laiziKongs:options.laiziKongs || 0,
     activeWildCount:options.activeWildCount || 0,
@@ -114,7 +115,7 @@ describe('百变斗牌计算器', () => {
     const state = {
       hand:['lz',19,20,21,23,23,23,28,28,28],
       discards:[],
-      kongs:[{tile:29,fromHand:4,fromDiscards:0}],
+      kongs:[{tile:29,size:4}],
       laiziKongs:[], flags
     }
     const result=calculateWaits(state)
@@ -142,16 +143,67 @@ describe('百变斗牌计算器', () => {
     expect(score.multipliers.map(x=>x.name).some(name=>name.startsWith('五根'))).toBe(false)
   })
 
+  it.each([
+    ['一组8张',8,[8],5],
+    ['两组4+4',8,[4,4],5],
+    ['两组4+5',9,[4,5],6],
+    ['两组4+4并留1张',9,[4,4],6],
+    ['两组4+6',10,[4,6],7],
+    ['两组5+5',10,[5,5],7],
+    ['两组4+4并留2张',10,[4,4],7],
+    ['两组4+5并留1张',10,[4,5],7],
+    ['两组5+6',11,[5,6],8],
+    ['三组4+4+4',12,[4,4,4],9]
+  ])('%s按同牌实体总数只计算一个对应根', (_label,total,sizes,expectedMultiplier) => {
+    const tile=22
+    const physical=Array(34).fill(0); physical[tile]=total
+    const kongs=sizes.map(size=>({tile,size}))
+    const groups=kongs.map(item=>({type:'kong',tiles:Array(item.size).fill(tile),fixed:true}))
+    const score=scoreGroups(groups,{finalCounts:physical,physicalCounts:physical,kongs,activeWildCount:1})
+    const roots=score.multipliers.filter(rule=>rule.id.startsWith('root_'))
+    expect(roots).toHaveLength(1)
+    expect(roots[0]).toMatchObject({id:`root_${tile}`,value:expectedMultiplier})
+    expect(roots[0].name).toContain(`${['','','','','四','五','六','七','八','九','十','十一','十二'][total]}根`)
+  })
+
+  it('不同牌种的根可以分别计算，但同牌多杠不会拆成多个低级根', () => {
+    const physical=Array(34).fill(0); physical[0]=4; physical[22]=9
+    const kongs=[{tile:0,size:4},{tile:22,size:4},{tile:22,size:5}]
+    const groups=kongs.map(item=>({type:'kong',tiles:Array(item.size).fill(item.tile),fixed:true}))
+    const score=scoreGroups(groups,{finalCounts:physical,physicalCounts:physical,kongs,activeWildCount:1})
+    expect(score.multipliers.filter(rule=>rule.id.startsWith('root_')).map(rule=>[rule.id,rule.value])).toEqual([
+      ['root_0',2],
+      ['root_22',6]
+    ])
+  })
+
   it('万能赖可以替代任意花色并选择最高番方案', () => {
     const state={
       hand:['la',19,20,21,23,23,23,28,28,28],discards:[],
-      kongs:[{tile:29,fromHand:4,fromDiscards:0}],laiziKongs:[],flags
+      kongs:[{tile:29,size:4}],laiziKongs:[],flags
     }
     const result=calculateWaits(state)
     const east=result.waits.find(item=>item.id===27)
     expect(east.score.actual).toBe(1500)
     expect(east.solution.assignments).toContainEqual({laizi:'la',as:27})
     expect(result.waits.some(item=>typeof item.id==='number' && item.id<27)).toBe(true)
+  })
+
+  it('多个癞子保留不同大牌解释，但不跨方案叠加计番', () => {
+    const state={
+      hand:[9,10,11,11,12,13,14,15,16,17,'la','la','la'],
+      kongs:[],laiziKongs:[],flags
+    }
+    const result=calculateWaits(state)
+    const east=result.waits.find(wait=>wait.id===27)
+    const oneDot=result.waits.find(wait=>wait.id===9)
+    const nineDot=result.waits.find(wait=>wait.id===17)
+
+    expect(east.score.additive.map(rule=>rule.id)).toContain('si_bu_gao')
+    expect(east.alternatives.some(item=>item.score.additive.some(rule=>rule.id==='long_yu_si_fang_qing'))).toBe(true)
+    expect(oneDot.alternatives.some(item=>item.score.additive.some(rule=>rule.id==='jiu_lian_bao_deng'))).toBe(true)
+    expect(nineDot.alternatives.some(item=>item.score.additive.some(rule=>rule.id==='jiu_lian_bao_deng'))).toBe(true)
+    expect(east.score.additive.map(rule=>rule.id)).not.toContain('long_yu_si_fang_qing')
   })
 
   it('同一种牌可记录两个四张杠并遵守12张库存', () => {
@@ -162,6 +214,106 @@ describe('百变斗牌计算器', () => {
     expect(knownPhysicalCounts(state)[22]).toBe(12)
     state.discards.push(22)
     expect(validateState(state)).toContain('超过12张')
+  })
+
+  it.each([
+    [5,2],
+    [8,6],
+    [9,8],
+    [10,11],
+    [11,14],
+    [12,19]
+  ])('暗手有%s张同牌时生成全部%s种合法杠组分配', (copies,expectedCount) => {
+    const options=availableKongOptions(Array(copies).fill(22),22)
+    expect(options).toHaveLength(expectedCount)
+    expect(new Set(options.map(option=>option.sizes.join('+'))).size).toBe(options.length)
+    for(const option of options) {
+      expect(option.sizes.every(size=>size>=4)).toBe(true)
+      expect(option.sizes).toEqual([...option.sizes].sort((a,b)=>a-b))
+      expect(option.total).toBe(option.sizes.reduce((sum,size)=>sum+size,0))
+      expect(option.total).toBeLessThanOrEqual(copies)
+    }
+  })
+
+  it('多组杠允许不同张数、允许留下同牌且受剩余面子数限制', () => {
+    expect(availableKongOptions(Array(9).fill(22),22).map(option=>option.sizes)).toEqual(expect.arrayContaining([[4,4],[4,5]]))
+    expect(availableKongOptions(Array(10).fill(22),22).map(option=>option.sizes)).toEqual(expect.arrayContaining([[4,4],[4,5],[4,6],[5,5]]))
+    expect(availableKongOptions(Array(12).fill(22),22).map(option=>option.sizes)).toContainEqual([4,4,4])
+    expect(availableKongOptions(Array(12).fill(22),22,2).some(option=>option.sizes.length>2)).toBe(false)
+    expect(availableKongOptions(Array(12).fill(22),22,4)).toEqual([])
+  })
+
+  it('实际杠组张数参与库存统计，缺少size的旧数据仍按4张处理', () => {
+    const state={hand:[22],kongs:[{tile:22,size:5},{tile:22}],laiziKongs:[],flags}
+    expect(knownPhysicalCounts(state)[22]).toBe(10)
+    expect(completedPhysicalCounts([22,22],[{tile:22,size:6}])[22]).toBe(8)
+    expect(validateState(state)).toBe('')
+  })
+
+  it('固定杠在胡牌拆分中保留实际张数，但仍只占一个面子', () => {
+    const state={
+      hand:[0,1,2,9,10,11,18,19,20,27],
+      kongs:[{tile:31,size:5}],laiziKongs:[],flags
+    }
+    const result=calculateWaits(state)
+    const east=result.waits.find(wait=>wait.id===27)
+    expect(result.structural).toBe(13)
+    expect(east).toBeTruthy()
+    expect(east.solution.groups.find(group=>group.type==='kong')?.tiles).toEqual(Array(5).fill(31))
+  })
+
+  it('一组8张算一个面子，两组4+4算两个面子', () => {
+    const oneGroup=calculateWaits({hand:[1,2,3,4,5,6,7,8,9,10],kongs:[{tile:0,size:8}],laiziKongs:[],flags})
+    const twoGroups=calculateWaits({hand:[1,2,3,4,5,6,7],kongs:[{tile:0,size:4},{tile:0,size:4}],laiziKongs:[],flags})
+    expect(oneGroup.structural).toBe(13)
+    expect(twoGroups.structural).toBe(13)
+  })
+
+  it.each([
+    [22,5,'er_shi_er_tian_wang'],
+    [26,6,'er_shi_liu_jin_fo']
+  ])('四组扩展杠与将牌合计%s张时命中特殊杠牌型', (total,size,ruleId) => {
+    const kongs=[0,9,18,31].map(tile=>({tile,size}))
+    const groups=[...kongs.map(item=>({type:'kong',tiles:Array(item.size).fill(item.tile),fixed:true})),pair(27)]
+    const physical=completedPhysicalCounts([27,27],kongs)
+    expect(physical.reduce((sum,count)=>sum+count,0)).toBe(total)
+    const score=scoreGroups(groups,{finalCounts:physical,physicalCounts:physical,kongs,activeWildCount:1})
+    expect(score.multipliers.map(rule=>rule.id)).toContain(ruleId)
+  })
+
+  it('counts a concealed laizi toward the 22-tile hand but excludes established laizi kongs', () => {
+    const kongs=[0,9,18,31].map(tile=>({tile,size:5}))
+    const result=calculateWaits({hand:['la'],kongs,laiziKongs:['lm'],flags})
+    expect(result.error).toBe('')
+    expect(result.waits.length).toBeGreaterThan(0)
+    for (const wait of result.waits) {
+      const ids=wait.score.multipliers.map(rule=>rule.id)
+      expect(ids).toContain('er_shi_er_tian_wang')
+      expect(ids).not.toContain('si_gang_zi')
+      expect(ids).not.toContain('er_shi_liu_jin_fo')
+    }
+  })
+
+  it.each([
+    [21,[]],
+    [22,['er_shi_er_tian_wang']],
+    [23,['er_shi_er_tian_wang']],
+    [24,['er_shi_er_tian_wang']],
+    [25,['er_shi_er_tian_wang']],
+    [26,['er_shi_liu_jin_fo']],
+    [27,['er_shi_liu_jin_fo']]
+  ])('uses reached thresholds for a four-kong physical total of %s', (physicalTileTotal,expected) => {
+    const groups=[kong(0),kong(9),kong(18),kong(31),pair(27)]
+    const kongs=groups.slice(0,4).map(group=>({tile:group.tiles[0]}))
+    const score=scoreGroups(groups,{kongs,activeWildCount:1,physicalTileTotal})
+    const special=score.multipliers.map(rule=>rule.id).filter(id=>id==='er_shi_er_tian_wang'||id==='er_shi_liu_jin_fo')
+    expect(special).toEqual(expected)
+    if (physicalTileTotal>=22) expect(score.multipliers.map(rule=>rule.id)).not.toContain('si_gang_zi')
+  })
+
+  it('普通杠每组不能少于4张', () => {
+    const state={hand:[],kongs:[{tile:22,size:3}],laiziKongs:[],flags}
+    expect(validateState(state)).toContain('至少需要4张')
   })
 
   it('只有没有其他加法番时才回退鸡胡', () => {
@@ -513,6 +665,47 @@ describe('十八罗汉复合封顶等级', () => {
     expect(score.category).toBe('hard')
     expect(score.categoryName).toBe('硬胡')
     expect(score.cap).toBe(9000)
+  })
+})
+
+describe('二十二天王与二十六金佛封顶等级', () => {
+  const scoreSpecialKongs = (groups, physicalTileTotal) => scoreGroups(groups,{
+    kongs:groups.filter(group=>group.type==='kong').map(group=>({tile:group.tiles[0]})),
+    activeWildCount:1,
+    physicalTileTotal
+  })
+
+  it.each([
+    ['基础二十二天王为大胡',[kong(0),kong(9),kong(18),kong(31),pair(27)],null,'big',4000],
+    ['二十二天王与混一色复合为顶胡',[kong(0),kong(3),kong(6),kong(27),pair(4)],'hun_yi_se','top',6000],
+    ['二十二天王与清一色复合为顶胡',[kong(0),kong(1),kong(2),kong(3),pair(4)],'qing_yi_se','top',6000],
+    ['二十二天王与字一色复合为顶胡',[kong(27),kong(28),kong(29),kong(30),pair(31)],'zi_yi_se','top',6000]
+  ])('%s', (_label,groups,companionId,category,cap) => {
+    const score=scoreSpecialKongs(groups,22)
+    expect(score.multipliers.map(rule=>rule.id)).toContain('er_shi_er_tian_wang')
+    if(companionId) expect(score.additive.map(rule=>rule.id)).toContain(companionId)
+    expect(score.category).toBe(category)
+    expect(score.cap).toBe(cap)
+  })
+
+  it('二十六金佛为顶胡并排除二十二天王和十八罗汉', () => {
+    const groups=[kong(0),kong(9),kong(18),kong(31),pair(27)]
+    const score=scoreSpecialKongs(groups,26)
+    expect(score.multipliers.map(rule=>rule.id)).toContain('er_shi_liu_jin_fo')
+    expect(score.multipliers.map(rule=>rule.id)).not.toContain('er_shi_er_tian_wang')
+    expect(score.multipliers.map(rule=>rule.id)).not.toContain('si_gang_zi')
+    expect(score.category).toBe('top')
+    expect(score.cap).toBe(6000)
+  })
+})
+
+describe('五门齐封顶等级', () => {
+  it('五门齐自身按小胡3000封顶', () => {
+    const groups=[sequence(0),sequence(9),sequence(18),pung(27),pair(31)]
+    const score=scoreGroups(groups,{activeWildCount:1})
+    expect(score.additive.map(rule=>rule.id)).toContain('wu_men_qi')
+    expect(score.category).toBe('small')
+    expect(score.cap).toBe(3000)
   })
 })
 

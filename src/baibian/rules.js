@@ -181,7 +181,7 @@ export const RULE_CATALOG = [
   additive('shuang_lao_shao_fu','双老少副',500,'big',f => countOldYoung(f) >= 2),
   additive('jiu_wu_zhi_zun','九五至尊',500,'top',f => f.hasExactlyOneHonorGroup && isNineFiveNumberStructure(f)),
   additive('hua_long','花龙',500,'big',(f,ctx) => isFlowerDragon(f) || ctx.solution.kind === 'imperialFlowerDragon'),
-  additive('wu_men_qi','五门齐',500,'big',f => [0,1,2].every(s => f.usedSuits.includes(s)) && f.ids.some(id => id >= 27 && id <= 30) && f.ids.some(id => id >= 31)),
+  additive('wu_men_qi','五门齐',500,'small',f => [0,1,2].every(s => f.usedSuits.includes(s)) && f.ids.some(id => id >= 27 && id <= 30) && f.ids.some(id => id >= 31)),
   additive('si_xi_qi_dui','四喜七对',400,'big',f => f.isSevenPairs && [27,28,29,30].every(id => f.counts[id] >= 2)),
   additive('tui_bu_dao','推不倒',400,'big',f => f.ids.every(id => [9,10,11,12,13,17,19,20,21,23,24,25,33].includes(id))),
   additive('zi_yi_se','字一色',300,'big',f => f.ids.every(id => id >= 27)),
@@ -307,14 +307,17 @@ export function scoreSolution(context) {
   const rawAdditive = RULE_CATALOG.filter(rule => rule.test(facts, context))
   const rawMultipliers = rootMultipliers(context.physicalCounts)
   const kongCount = context.kongs.length
-  const physicalTotal = context.physicalCounts.reduce((a,b)=>a+b,0)
+  const physicalTotal = context.physicalTileTotal ?? context.physicalCounts.reduce((a,b)=>a+b,0)
   if (kongCount >= 3) rawMultipliers.push({ id:'san_gang_zi', name:'三杠子／十二金钗', kind:'multiply', value:1.5 })
   if (kongCount >= 4) rawMultipliers.push({
     id:'si_gang_zi', name:'四杠子／十八罗汉', kind:'multiply', value:8,
     categoryWith:{ qing_yi_se:'top', zi_yi_se:'top' }
   })
-  if (kongCount === 4 && physicalTotal === 22) rawMultipliers.push({ id:'er_shi_er_tian_wang', name:'二十二天王', kind:'multiply', value:16, category:'big' })
-  if (kongCount === 4 && physicalTotal === 26) rawMultipliers.push({ id:'er_shi_liu_jin_fo', name:'二十六金佛', kind:'multiply', value:32, category:'top' })
+  if (kongCount === 4 && physicalTotal >= 22) rawMultipliers.push({
+    id:'er_shi_er_tian_wang', name:'二十二天王', kind:'multiply', value:16, category:'big',
+    categoryWith:{ hun_yi_se:'top', qing_yi_se:'top', zi_yi_se:'top' }
+  })
+  if (kongCount === 4 && physicalTotal >= 26) rawMultipliers.push({ id:'er_shi_liu_jin_fo', name:'二十六金佛', kind:'multiply', value:32, category:'top' })
   for(let i=0;i<context.laiziKongs;i++) rawMultipliers.push({ id:`laizi_kong_${i}`, name:'赖子杠', kind:'multiply', value:1.5 })
   if (context.flags?.tianHu) rawMultipliers.push({ id:'tian_hu', name:'天胡', kind:'multiply', value:20, category:'top' })
   if (context.flags?.gangShangKaiHua) rawMultipliers.push({ id:'gang_shang_kai_hua', name:'杠上开花', kind:'multiply', value:2, category:'top' })

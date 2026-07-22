@@ -3,21 +3,45 @@ import { enumerateWinningDecompositions } from './winEngine.js'
 import { scoreSolution } from './rules.js'
 
 export function knownPhysicalCounts(state) {
-  const counts = idsToCounts([...state.hand, ...state.discards])
-  state.kongs.forEach(kong => { counts[kong.tile] += 4 })
+  const counts = idsToCounts([...state.hand, ...(state.discards || [])])
+  state.kongs.forEach(kong => { counts[kong.tile] += kongSize(kong) })
   return counts
+}
+
+export function kongSize(kong) {
+  return kong.size ?? 4
+}
+
+export function availableKongOptions(hand, tile, establishedKongCount = 0) {
+  const copies = hand.filter(id => id === tile).length
+  const maxGroups = Math.max(0, Math.min(Math.floor(copies / 4), 4 - establishedKongCount))
+  const options = []
+
+  function chooseSizes(groupsLeft, remaining, minimum, sizes) {
+    if (!groupsLeft) {
+      const selected = [...sizes]
+      options.push({ sizes:selected, total:selected.reduce((sum,size)=>sum+size,0) })
+      return
+    }
+    const maxSize = remaining - (groupsLeft - 1) * 4
+    for (let size=minimum;size<=maxSize;size++) chooseSizes(groupsLeft-1,remaining-size,size,[...sizes,size])
+  }
+
+  for (let groupCount=1;groupCount<=maxGroups;groupCount++) chooseSizes(groupCount,copies,4,[])
+  return options
 }
 
 export function completedPhysicalCounts(hand, kongs) {
   const counts = idsToCounts(hand)
-  kongs.forEach(kong => { counts[kong.tile] += 4 })
+  kongs.forEach(kong => { counts[kong.tile] += kongSize(kong) })
   return counts
 }
 
 export function validateState(state) {
+  if (state.kongs.some(kong => !Number.isInteger(kongSize(kong)) || kongSize(kong) < 4)) return '普通杠每组至少需要4张牌'
   const known = knownPhysicalCounts(state)
   const over = known.findIndex(n => n > 12)
-  if (over >= 0) return `${tileName(over)}在手牌、场牌和杠组中合计超过12张`
+  if (over >= 0) return `${tileName(over)}在暗手牌和杠组中合计超过12张`
   if (state.kongs.length > 4) return '普通杠组最多占用四个面子'
   const structural = state.hand.length + state.kongs.length * 3
   if (structural > 14) return '当前有效结构牌数超过14张'
@@ -32,6 +56,14 @@ function finalCountsFor(solution, physicalCounts) {
 
 function compareScored(a, b) {
   return b.score.actual - a.score.actual || b.score.theoretical - a.score.theoretical || b.score.additive.length - a.score.additive.length
+}
+
+function scoringSignature(item) {
+  return [
+    item.solution.kind,
+    item.score.additive.map(rule => rule.id).sort().join(','),
+    item.score.multipliers.map(rule => rule.id).sort().join(',')
+  ].join('|')
 }
 
 function universalDistributions(total) {
@@ -79,12 +111,14 @@ export function calculateWaits(state) {
     })
     if (!solutions.length) continue
     const physicalCounts = completedPhysicalCounts(hand, state.kongs)
+    const physicalTileTotal = hand.length + state.kongs.reduce((sum, kong) => sum + kongSize(kong), 0)
     const scored = solutions.map(solution => {
       const finalCounts = finalCountsFor(solution, physicalCounts)
       const score = scoreSolution({
         solution,
         finalCounts,
         physicalCounts,
+        physicalTileTotal,
         kongs:state.kongs,
         laiziKongs:state.laiziKongs.length,
         activeWildCount:concealedWildCount,
@@ -92,7 +126,15 @@ export function calculateWaits(state) {
       })
       return { solution, score, finalCounts }
     }).sort(compareScored)
-    waits.push({ id:candidate.id, left:candidate.left, ...scored[0] })
+    const best = scored[0]
+    const seenAlternatives = new Set([scoringSignature(best)])
+    const alternatives = scored.filter(item => {
+      const signature = scoringSignature(item)
+      if (seenAlternatives.has(signature)) return false
+      seenAlternatives.add(signature)
+      return true
+    }).slice(0,5)
+    waits.push({ id:candidate.id, left:candidate.left, ...best, alternatives })
   }
   waits.sort((a,b) => b.score.actual-a.score.actual || b.score.theoretical-a.score.theoretical || String(a.id).localeCompare(String(b.id)))
   const theoreticalBest = [...waits].sort((a,b)=>b.score.theoretical-a.score.theoretical)[0] || null
