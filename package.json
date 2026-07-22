@@ -1,0 +1,20 @@
+{
+  "name": "mahjong-tingpai",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "latest",
+    "vite": "latest",
+    "vue": "latest",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  }
+}
