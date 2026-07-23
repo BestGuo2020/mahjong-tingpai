@@ -665,6 +665,61 @@ describe('推不倒允许牌集合', () => {
   })
 })
 
+describe('大四喜与大三元复合封顶等级', () => {
+  const fourWinds=[pung(27),pung(28),pung(29),pung(30)]
+  const threeDragons=[pung(31),pung(32),pung(33)]
+
+  it('软胡基础大四喜仍为大胡', () => {
+    const score=scoreGroups([...fourWinds,pair(3)],{activeWildCount:1})
+    expect(score.additive.map(rule=>rule.id)).toContain('da_si_xi')
+    expect(score.category).toBe('big')
+    expect(score.cap).toBe(4000)
+  })
+
+  it.each([
+    ['字一色',[...fourWinds,pair(31)],'zi_yi_se'],
+    ['黑一色',[...fourWinds,pair(10)],'hei_yi_se'],
+    ['混幺九',[...fourWinds,pair(0)],'hun_yao_jiu'],
+    ['断红胡',[...fourWinds,pair(19)],'duan_hong']
+  ])('软胡大四喜与%s复合时提升为顶胡', (_label,groups,companionId) => {
+    const score=scoreGroups(groups,{activeWildCount:1})
+    expect(score.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['da_si_xi',companionId]))
+    expect(score.category).toBe('top')
+    expect(score.cap).toBe(6000)
+  })
+
+  it('无癞子的基础大四喜进阶超级硬胡并封顶10000', () => {
+    const score=scoreGroups([...fourWinds,pair(3)])
+    expect(score.category).toBe('super')
+    expect(score.cap).toBe(10000)
+  })
+
+  it.each([
+    ['字一色',[...fourWinds,pair(31)]],
+    ['黑一色',[...fourWinds,pair(10)]],
+    ['混幺九',[...fourWinds,pair(0)]],
+    ['断红胡',[...fourWinds,pair(19)]]
+  ])('无癞子大四喜与%s复合时超级硬胡封顶12000', (_label,groups) => {
+    const score=scoreGroups(groups)
+    expect(score.category).toBe('super')
+    expect(score.cap).toBe(12000)
+  })
+
+  it('软胡基础大三元为大胡，与字一色或混幺九复合时提升顶胡', () => {
+    const base=scoreGroups([...threeDragons,pung(3),pair(4)],{activeWildCount:1})
+    const allHonors=scoreGroups([...threeDragons,pung(27),pair(28)],{activeWildCount:1})
+    const mixedTerminals=scoreGroups([...threeDragons,pung(0),pair(8)],{activeWildCount:1})
+    expect(base.category).toBe('big')
+    expect(base.cap).toBe(4000)
+    expect(allHonors.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['da_san_yuan','zi_yi_se']))
+    expect(allHonors.category).toBe('top')
+    expect(allHonors.cap).toBe(6000)
+    expect(mixedTerminals.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['da_san_yuan','hun_yao_jiu']))
+    expect(mixedTerminals.category).toBe('top')
+    expect(mixedTerminals.cap).toBe(6000)
+  })
+})
+
 describe('连六对封顶等级', () => {
   const consecutiveSix=[pair(0),pair(1),pair(2),pair(3),pair(4),pair(5)]
 

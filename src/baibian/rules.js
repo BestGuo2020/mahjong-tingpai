@@ -168,8 +168,14 @@ export const RULE_CATALOG = [
   additive('zu_he_long','组合龙',1000,'big',(f,ctx) => isCombinationDragon(f) || ctx.solution.kind === 'imperialCombinationDragon',{ superWhen:(f,ctx)=>ctx.solution.kind==='allUnrelated',superCap:10000 }),
   additive('hun_bai_wan_shi','混百万石',1000,'big',f => f.usedSuits.length === 1 && f.usedSuits[0] === 0 && f.hasExactlyOneHonorGroup && f.numbered.reduce((s,id) => s + rankOf(id),0) >= 100),
   additive('san_bu_gao','三步高',1000,'big',f => stepHigh(f,3)),
-  additive('da_si_xi','大四喜',900,'big',f => [27,28,29,30].every(f.hasPung),{ superWhen: f => f.ids.every(id => id >= 27) || isMixedTerminals(f) || isBrokenRed(f), superCap: 12000 }),
-  additive('da_san_yuan','大三元',800,'big',f => [31,32,33].every(f.hasPung)),
+  additive('da_si_xi','大四喜',900,'big',f => [27,28,29,30].every(f.hasPung),{
+    categoryWith:{ zi_yi_se:'top', hei_yi_se:'top', hun_yao_jiu:'top', duan_hong:'top' },
+    superCap:10000,
+    superCapWith:{ zi_yi_se:12000, hei_yi_se:12000, hun_yao_jiu:12000, duan_hong:12000 }
+  }),
+  additive('da_san_yuan','大三元',800,'big',f => [31,32,33].every(f.hasPung),{
+    categoryWith:{ zi_yi_se:'top', hun_yao_jiu:'top' }
+  }),
   additive('quan_bu_kao','全不靠',800,'big',(f,ctx) => ctx.solution.kind === 'allUnrelated'),
   additive('si_tong_shun','四同顺',600,'big',f => f.sequenceStarts.some(start => f.countSequences(start) >= 4),{
     categoryWith:{ qing_yi_se:'top' },
@@ -344,7 +350,9 @@ export function scoreSolution(context) {
     }
     if (rule.promoteWith && ids.has(rule.promoteWith) && categoryWeight.top > categoryWeight[category]) category = 'top'
     if (rule.promoteWhen?.(facts, context) && categoryWeight.top > categoryWeight[category]) category = 'top'
-    if (!hasActiveLaizi && rule.superCap && (!rule.superWhen || rule.superWhen(facts, context))) { category = 'super'; superCap = Math.max(superCap, rule.superCap) }
+    const combinedSuperCap = Object.entries(rule.superCapWith || {}).reduce((cap,[otherId,value]) => ids.has(otherId) ? Math.max(cap,value) : cap,0)
+    const eligibleSuperCap = Math.max(rule.superCap || 0,combinedSuperCap)
+    if (!hasActiveLaizi && eligibleSuperCap && (!rule.superWhen || rule.superWhen(facts, context))) { category = 'super'; superCap = Math.max(superCap, eligibleSuperCap) }
   }
 
   const additiveTotal = matched.reduce((sum, rule) => sum + rule.value, 0)
