@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://tingpai.bestguo.top/sitemap.xml
