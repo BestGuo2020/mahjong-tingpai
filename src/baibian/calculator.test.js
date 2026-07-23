@@ -720,6 +720,52 @@ describe('大四喜与大三元复合封顶等级', () => {
   })
 })
 
+describe('七星与四喜、三元七对的字牌种类判定', () => {
+  const resultFor = code => calculateWaits({ hand: parseTileCode(code), kongs: [], laiziKongs: [], flags })
+  const additiveIds = wait => wait.score.additive.map(rule => rule.id)
+
+  it('重复四风对子只计四喜七对，不会误判大小七星', () => {
+    const result = resultFor('111122223344zla')
+    const windWait = result.waits.find(item => item.id === 27)
+    const numberedWait = result.waits.find(item => item.id === 0)
+    expect(windWait).toBeTruthy()
+    expect(numberedWait).toBeTruthy()
+    expect(additiveIds(windWait)).toContain('si_xi_qi_dui')
+    expect(additiveIds(windWait)).not.toEqual(expect.arrayContaining(['da_qi_xing', 'xiao_qi_xing']))
+    expect(additiveIds(numberedWait)).toContain('si_xi_qi_dui')
+    expect(additiveIds(numberedWait)).not.toEqual(expect.arrayContaining(['da_qi_xing', 'xiao_qi_xing']))
+  })
+
+  it('重复三元对子只计三元七对，不会误判大小七星', () => {
+    const result = resultFor('555566667777zla')
+    const dragonWait = result.waits.find(item => item.id === 31)
+    const numberedWait = result.waits.find(item => item.id === 0)
+    expect(dragonWait).toBeTruthy()
+    expect(numberedWait).toBeTruthy()
+    expect(additiveIds(dragonWait)).toContain('san_yuan_qi_dui')
+    expect(additiveIds(dragonWait)).not.toEqual(expect.arrayContaining(['da_qi_xing', 'xiao_qi_xing']))
+    expect(additiveIds(numberedWait)).toContain('san_yuan_qi_dui')
+    expect(additiveIds(numberedWait)).not.toEqual(expect.arrayContaining(['da_qi_xing', 'xiao_qi_xing']))
+  })
+
+  it.each([
+    ['113344556677zla', 28],
+    ['112233445566zla', 33],
+  ])('六种不同字牌对子：%s 补缺失字牌为大七星，补重复字牌为小七星', (code, missingHonorId) => {
+    const result = resultFor(code)
+    const missingHonorWait = result.waits.find(item => item.id === missingHonorId)
+    const repeatedHonorWait = result.waits.find(item => item.id === 27)
+    const numberedWait = result.waits.find(item => item.id === 0)
+    expect(missingHonorWait).toBeTruthy()
+    expect(repeatedHonorWait).toBeTruthy()
+    expect(numberedWait).toBeTruthy()
+    expect(additiveIds(missingHonorWait)).toContain('da_qi_xing')
+    expect(additiveIds(missingHonorWait)).not.toContain('xiao_qi_xing')
+    expect(additiveIds(repeatedHonorWait)).toContain('xiao_qi_xing')
+    expect(additiveIds(repeatedHonorWait)).not.toContain('da_qi_xing')
+    expect(additiveIds(numberedWait)).not.toEqual(expect.arrayContaining(['da_qi_xing', 'xiao_qi_xing']))
+  })
+})
 describe('连六对封顶等级', () => {
   const consecutiveSix=[pair(0),pair(1),pair(2),pair(3),pair(4),pair(5)]
 
