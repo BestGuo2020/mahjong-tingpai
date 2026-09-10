@@ -107,8 +107,7 @@ function buildFacts(ctx) {
   const hasExactlyOneHonorGroup = honorGroups.length === 1 && honors.length === honorGroups[0].tiles.length
   const isSevenPairs = ctx.solution.kind === 'sevenPairs'
   const pairTiles = ctx.solution.groups.filter(g => g.type === 'pair').map(g => g.tiles[0]).sort((a,b) => a-b)
-  const distinctHonorPairCount = new Set(pairTiles.filter(id => id >= 27)).size
-  return { counts, ids, numbered, honors, usedSuits, melds, sequences, pungs, pair, pairGroups, honorGroups, pungTiles, sequenceStarts, allGroups, hasPung, hasSequence, countSequences, allNumberRanks, allTiles, allMelds, pungRankSuitCount, windPungTiles, windPungs, dragonPungs, hasHonorPair, hasExactlyOneHonorGroup, isSevenPairs, pairTiles, distinctHonorPairCount }
+  return { counts, ids, numbered, honors, usedSuits, melds, sequences, pungs, pair, pairGroups, honorGroups, pungTiles, sequenceStarts, allGroups, hasPung, hasSequence, countSequences, allNumberRanks, allTiles, allMelds, pungRankSuitCount, windPungTiles, windPungs, dragonPungs, hasHonorPair, hasExactlyOneHonorGroup, isSevenPairs, pairTiles }
 }
 
 const consecutive = (values, length, step = 1) => {
@@ -135,7 +134,7 @@ const isNineFiveNumberStructure = f => f.numbered.length > 0 && f.sequences.leng
 export const RULE_CATALOG = [
   additive('lian_qi_dui','连七对',2800,'top',f => f.isSevenPairs && pairsConsecutive(f.pairTiles, 7), { superCap: 10000 }),
   additive('yi_se_shuang_long','一色双龙会',2800,'top',f => !f.honors.length && f.usedSuits.length === 1 && f.sequences.filter(g => rankOf(g.tiles[0]) === 1).length >= 2 && f.sequences.filter(g => rankOf(g.tiles[0]) === 7).length >= 2 && f.pair != null && f.pair < 27 && rankOf(f.pair) === 5, { superCap: 10000 }),
-  additive('da_qi_xing','大七星',2800,'top',f => f.isSevenPairs && f.distinctHonorPairCount === 7, { superCap: 15000 }),
+  additive('da_qi_xing','大七星',2800,'top',f => f.isSevenPairs && f.pairTiles.every(id => id >= 27), { superCap: 15000 }),
   additive('long_yu_si_fang_hua','龙御四方（花龙）',2500,'top',(_f,ctx) => ctx.solution.kind === 'imperialFlowerDragon'),
   additive('long_yu_si_fang_qing','龙御四方（清龙）',2500,'top',(_f,ctx) => ctx.solution.kind === 'imperialPureDragon'),
   additive('long_yu_si_fang_zuhe','龙御四方（组合龙）',2500,'top',(_f,ctx) => ctx.solution.kind === 'imperialCombinationDragon'),
@@ -163,7 +162,7 @@ export const RULE_CATALOG = [
 
   additive('si_bu_gao','四步高',2700,'big',f => stepHigh(f,4),{ promoteWhen: f => f.usedSuits.length === 1 && !f.honors.length, superWhen: f => f.usedSuits.length === 1 && !f.honors.length, superCap: 10000 }),
   additive('hun_shuang_long','混双龙会',1800,'big',isMixedDoubleDragon),
-  additive('xiao_qi_xing','小七星',1800,'big',f => f.isSevenPairs && f.distinctHonorPairCount === 6 && f.pairTiles.every(id => id >= 27)),
+  additive('xiao_qi_xing','小七星',1800,'big',f => f.isSevenPairs && f.pairTiles.filter(id => id >= 27).length === 6),
   additive('qi_xing_bu_kao','七星不靠',1800,'big',(f,ctx) => ctx.solution.kind === 'allUnrelated' && [27,28,29,30,31,32,33].every(id => f.counts[id] === 1)),
   additive('lian_liu_dui','连六对',1500,'small',f => f.isSevenPairs && pairsConsecutive(f.pairTiles,6),{ categoryWith:{ qing_yi_se:'top', hun_yi_se:'big' } }),
   additive('zu_he_long','组合龙',1000,'big',(f,ctx) => isCombinationDragon(f) || ctx.solution.kind === 'imperialCombinationDragon',{ superWhen:(f,ctx)=>ctx.solution.kind==='allUnrelated',superCap:10000 }),
