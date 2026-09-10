@@ -167,7 +167,7 @@ export const RULE_CATALOG = [
   additive('lian_liu_dui','连六对',1500,'small',f => f.isSevenPairs && pairsConsecutive(f.pairTiles,6),{ categoryWith:{ qing_yi_se:'top', hun_yi_se:'big' } }),
   additive('zu_he_long','组合龙',1000,'big',(f,ctx) => isCombinationDragon(f) || ctx.solution.kind === 'imperialCombinationDragon',{ superWhen:(f,ctx)=>ctx.solution.kind==='allUnrelated',superCap:10000 }),
   additive('hun_bai_wan_shi','混百万石',1000,'big',f => f.usedSuits.length === 1 && f.usedSuits[0] === 0 && f.hasExactlyOneHonorGroup && f.numbered.reduce((s,id) => s + rankOf(id),0) >= 100),
-  additive('san_bu_gao','三步高',1000,'big',f => stepHigh(f,3)),
+  additive('san_bu_gao','三步高',1000,'small',f => stepHigh(f,3)),
   additive('da_si_xi','大四喜',900,'big',f => [27,28,29,30].every(f.hasPung),{
     categoryWith:{ zi_yi_se:'top', hei_yi_se:'top', hun_yao_jiu:'top', duan_hong:'top' },
     superCap:10000,
