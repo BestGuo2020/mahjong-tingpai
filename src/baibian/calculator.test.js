@@ -768,6 +768,23 @@ describe('三同刻与混幺九复合封顶等级', () => {
     expect(wait.score.categoryName).toBe('顶胡')
     expect(wait.score.cap).toBe(6000)
   })
+
+  it('截图牌例听字赖时最佳方案和其他合法方案都显示顶胡', () => {
+    const result=calculateWaits({hand:parseTileCode('999m111999p999s la'),kongs:[],laiziKongs:[],flags})
+    const wait=result.waits.find(item=>item.id==='lz')
+    expect(wait).toBeTruthy()
+    expect(wait.score.additive.map(rule=>rule.id)).toEqual(['san_tong_ke','xiao_cai_yuan','hun_yao_jiu'])
+    expect(wait.score.actual).toBe(550)
+    expect(wait.solution.assignments).toEqual([{laizi:'lz',as:32},{laizi:'la',as:32}])
+    const alternative=wait.alternatives.find(item=>item.score.additive.map(rule=>rule.id).join(',')==='san_tong_ke,hun_yao_jiu')
+    expect(alternative).toBeTruthy()
+    expect(alternative.score.actual).toBe(400)
+    expect(alternative.solution.assignments).toEqual([{laizi:'lz',as:27},{laizi:'la',as:27}])
+    for(const item of [wait,alternative]) {
+      expect(item.score.categoryName).toBe('顶胡')
+      expect(item.score.cap).toBe(6000)
+    }
+  })
 })
 
 describe('连六对封顶等级', () => {
