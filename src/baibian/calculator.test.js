@@ -720,6 +720,56 @@ describe('大四喜与大三元复合封顶等级', () => {
   })
 })
 
+describe('三同刻与混幺九复合封顶等级', () => {
+  it.each([0,8])('软胡三同刻（牌 ID %i）与混幺九复合时提升为顶胡', firstTile => {
+    const groups=[pung(firstTile),pung(firstTile+9),pung(firstTile+18),pung(27),pair(28)]
+    const score=scoreGroups(groups,{activeWildCount:1,laiziKongs:8})
+    expect(score.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['san_tong_ke','hun_yao_jiu']))
+    expect(score.additive.map(rule=>rule.id)).not.toContain('shuang_tong_ke')
+    expect(score.category).toBe('top')
+    expect(score.categoryName).toBe('顶胡')
+    expect(score.cap).toBe(6000)
+    expect(score.theoretical).toBeGreaterThan(6000)
+    expect(score.actual).toBe(6000)
+  })
+
+  it.each([
+    ['三同刻',[pung(0),pung(9),pung(18),sequence(3),pair(27)],'san_tong_ke','hun_yao_jiu'],
+    ['混幺九',[pung(0),pung(17),pung(18),pung(27),pair(28)],'hun_yao_jiu','san_tong_ke']
+  ])('软胡%s单独成立时仍为大胡', (_label,groups,presentId,absentId) => {
+    const score=scoreGroups(groups,{activeWildCount:1})
+    expect(score.additive.map(rule=>rule.id)).toContain(presentId)
+    expect(detectedIds(score).has(absentId)).toBe(false)
+    expect(score.category).toBe('big')
+    expect(score.cap).toBe(4000)
+  })
+
+  it('三同刻含杠时也可与混幺九复合提升为顶胡', () => {
+    const score=scoreGroups([kong(0),pung(9),pung(18),pung(27),pair(28)],{
+      activeWildCount:1,kongs:[{tile:0}]
+    })
+    expect(score.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['san_tong_ke','hun_yao_jiu']))
+    expect(score.category).toBe('top')
+    expect(score.cap).toBe(6000)
+  })
+
+  it('无癞子时硬胡优先于三同刻混幺九的复合顶胡', () => {
+    const score=scoreGroups([pung(0),pung(9),pung(18),pung(27),pair(28)])
+    expect(score.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['san_tong_ke','hun_yao_jiu']))
+    expect(score.category).toBe('hard')
+    expect(score.cap).toBe(9000)
+  })
+
+  it('听牌计算中的三同刻混幺九显示顶胡', () => {
+    const result=calculateWaits({hand:parseTileCode('111m111p11s1112z lz'),kongs:[],laiziKongs:[],flags})
+    const wait=result.waits.find(item=>item.id===18)
+    expect(wait).toBeTruthy()
+    expect(wait.score.additive.map(rule=>rule.id)).toEqual(expect.arrayContaining(['san_tong_ke','hun_yao_jiu']))
+    expect(wait.score.categoryName).toBe('顶胡')
+    expect(wait.score.cap).toBe(6000)
+  })
+})
+
 describe('连六对封顶等级', () => {
   const consecutiveSix=[pair(0),pair(1),pair(2),pair(3),pair(4),pair(5)]
 
@@ -826,7 +876,8 @@ describe('二十二天王与二十六金佛封顶等级', () => {
   })
 
   it.each([
-    ['基础二十二天王为大胡',[kong(0),kong(9),kong(18),kong(31),pair(27)],null,'big',4000],
+    ['基础二十二天王为大胡',[kong(0),kong(10),kong(18),kong(31),pair(27)],null,'big',4000],
+    ['二十二天王与三同刻混幺九复合为顶胡',[kong(0),kong(9),kong(18),kong(31),pair(27)],'hun_yao_jiu','top',6000],
     ['二十二天王与混一色复合为顶胡',[kong(0),kong(3),kong(6),kong(27),pair(4)],'hun_yi_se','top',6000],
     ['二十二天王与清一色复合为顶胡',[kong(0),kong(1),kong(2),kong(3),pair(4)],'qing_yi_se','top',6000],
     ['二十二天王与字一色复合为顶胡',[kong(27),kong(28),kong(29),kong(30),pair(31)],'zi_yi_se','top',6000]

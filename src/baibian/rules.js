@@ -195,7 +195,9 @@ export const RULE_CATALOG = [
   additive('si_xi_qi_dui','四喜七对',400,'big',f => f.isSevenPairs && [27,28,29,30].every(id => f.counts[id] >= 2)),
   additive('tui_bu_dao','推不倒',400,'big',f => f.ids.every(id => [9,10,11,12,13,16,17,19,21,22,23,25,26,33].includes(id))),
   additive('zi_yi_se','字一色',300,'big',f => f.ids.every(id => id >= 27)),
-  additive('san_tong_ke','三同刻',300,'big',f => [1,2,3,4,5,6,7,8,9].some(rank => f.pungRankSuitCount(rank) === 3)),
+  additive('san_tong_ke','三同刻',300,'big',f => [1,2,3,4,5,6,7,8,9].some(rank => f.pungRankSuitCount(rank) === 3),{
+    categoryWith:{ hun_yao_jiu:'top' }
+  }),
   additive('shi_quan_shi_mei','十全十美',300,'big',f => tenPerfectPairs(f) >= 2 && f.hasHonorPair),
   additive('si_lian_ke','四连刻',300,'small',f => consecutivePungs(f,4),{
     categoryWith:{ qing_yi_se:'top' },
