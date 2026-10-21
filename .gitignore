@@ -1,7 +1,6 @@
 dist/
 .agents
 node_modules
-package-lock.json
 *.log
 .env
 .env.local
